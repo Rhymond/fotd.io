@@ -1,0 +1,44 @@
+service: fotd
+
+provider:
+  name: aws
+  runtime: go1.x
+  memorySize: 128
+  stage: dev
+  region: eu-west-2
+  environment:
+    S3_REGION: eu-west-2
+    S3_BUCKET: fotd
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - s3:PutObject
+        - s3:GetObject
+      Resource: "arn:aws:s3:::${self:provider.environment.S3_BUCKET}/*"
+
+package:
+ exclude:
+   - ./**
+ include:
+   - ./bin/**
+
+functions:
+  get:
+    handler: bin/get
+    events:
+      - http:
+          path: /
+          method: get
+  fetch:
+    handler: bin/fetch
+    events:
+      - schedule:
+          rate: rate(24 hours)
+          enabled: true
+
+resources:
+  Resources:
+    S3BucketFacts:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:provider.environment.S3_BUCKET}
